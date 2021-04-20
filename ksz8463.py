@@ -147,6 +147,10 @@ def port_2_power_off():
 def port_2_power_on():
     spi2(adress = 0x058,data = [0x20,0x31],rw = 1,max_speed = 5000000)
 
+def select_fiber_mode():
+    spi2(adress = 0x0D8,data = [0xFC,0x00],rw = 1,max_speed = 5000000)
+def select_coper_mode():
+    spi2(adress = 0x0D8,data = [0x3C,0x00],rw = 1,max_speed = 5000000)
 
 method_name = sys.argv[1]
 try: 
