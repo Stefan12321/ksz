@@ -2,6 +2,8 @@ import spidev
 import logging
 import time
 import sys
+import os
+import subprocess
 
 def blink():
     for i in range(0,10):
@@ -115,7 +117,9 @@ def spitest():
     print(" ")
     print (format(rxData[3],'#X')+format(rxData[2],'X')) 
 
-def iterate_over_values(start = 0x00, stop = 0x02):
+def iterate_over_values(start = 0X0D8, stop = 0X0D9):
+    logging.basicConfig(level=logging.DEBUG, filename=r'iteratelog.log', filemode='w',
+                        format='%(name)s - %(levelname)s - %(message)s')
     adress = start
     while(adress < stop):
         print(hex(adress))
@@ -148,10 +152,77 @@ def port_2_power_on():
     spi2(adress = 0x058,data = [0x20,0x31],rw = 1,max_speed = 5000000)
 
 def select_fiber_mode():
-    spi2(adress = 0x0D8,data = [0xFC,0x00],rw = 1,max_speed = 5000000)
-def select_coper_mode():
-    spi2(adress = 0x0D8,data = [0x3C,0x00],rw = 1,max_speed = 5000000)
+    spi2(adress = 0x0D8,data = [0x3E,0x00],rw = 1,max_speed = 5000000)
 
+def select_copper_mode():
+    spi2(adress = 0x0D8,data = [0xFE,0x00],rw = 1,max_speed = 5000000)
+
+def gpio_check_status(pin = 125):
+    print("pin = " + str(pin))
+    command = 'echo ' + str(pin)+' > /sys/class/gpio/export'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    command = 'echo "in" > /sys/class/gpio/gpio' + str(pin)+'/direction'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    command = 'cat /sys/class/gpio/gpio' + str(pin)+'/value'
+    result = os.popen(command).read()
+    logging.info("GPIO " + str(pin) +" status = "+ str(result))
+    status = result
+    print("GPIO " + str(pin) +" status = "+ str(result))
+    command = 'echo ' + str(pin)+' > /sys/class/gpio/unexport'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    print(status)
+    return status
+
+def gpio_check_status_silence(pin = 125):
+    # print("pin = " + str(pin))
+    command = 'echo ' + str(pin)+' > /sys/class/gpio/export'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    command = 'echo "in" > /sys/class/gpio/gpio' + str(pin)+'/direction'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    command = 'cat /sys/class/gpio/gpio' + str(pin)+'/value'
+    result = os.popen(command).read()
+    logging.info("GPIO " + str(pin) +" status = "+ str(result))
+    status = result
+    # print("GPIO " + str(pin) +" status = "+ str(result))
+    command = 'echo ' + str(pin)+' > /sys/class/gpio/unexport'
+    result = os.system(command)
+    if result != 0:
+        sys.exit("Something went wrong")
+    # print(status)
+    return int(status)
+
+def iterate_over_pins(start = 0, stop = 127):
+    logging.basicConfig(level=logging.DEBUG, filename=r'GPIOlog2.log', filemode='w',
+                        format='%(name)s - %(levelname)s - %(message)s')
+    adress = start
+    while(adress < stop):
+        try:
+            gpio_check_status_silence(pin = adress)
+            adress = adress + 1
+        except:
+            logging.info("GPIO " + str(adress) +" status = busy")
+            print("GPIO " + str(adress) +" status = busy")
+            adress = adress + 1
+    print("\033[32m {}".format("Done"))
+    print("\033[37m {}".format(" "))
+
+def sel_copp_fib():
+    if gpio_check_status_silence(pin = 125) == 0:
+        select_coper_mode()
+        print("Copper mode selected")
+    if gpio_check_status_silence(pin = 125) == 1:
+        select_fiber_mode()
+        print("Fiber mode selected")
 method_name = sys.argv[1]
 try: 
     parameter_name = sys.argv[2]
@@ -162,27 +233,3 @@ except:
     print("There is no parameter")
     getattr(sys.modules[__name__], method_name)()
     print(method_name)
-
-
-# txData, rxData = spi2(adress = 0x04C,data = [0x20,0x31],rw = 1,max_speed = 5000000)
-# logging.info(" ")
-# logging.info(txData)
-# logging.info(rxData)
-# logging.info(" ")
-# print(" ")
-# print("TX_DATA:")
-# print(txData)
-# for i in range(len(rxData)):
-#     print (format(txData[i],'#b')) 
-# print (format(txData[0],'#X')+format(txData[1],'X'))
-# print(" ")
-# print("RX_DATA:")
-# print(rxData)
-# for i in range(len(rxData)):
-#     print (format(rxData[i],'#b')) 
-# print(" ")
-# print (format(rxData[3],'#X')+format(rxData[2],'X'))
-# blink()
-
-# spitest()
-# port_2_power_on()
